@@ -38,16 +38,6 @@ People who own more than one device and are tired of the small friction of movin
 
 There's no account and no password — the code itself is the key. That keeps things simple, but it also means anyone who has your code can read or edit that note. Treat the code the way you'd treat a sticky note on your desk: fine for links, drafts, and snippets; not the place for passwords or anything truly sensitive.
 
-## For the curious: how it's built
-
-Pairnote is one self-contained page, hosted free on GitHub Pages, with a small Firebase database keeping each code's text in sync in real time. The code is split into four clean pieces — code generation, storage, interface, and app logic — so any part can be improved on its own without untangling the rest. Full technical setup is in [`SETUP.md`](./SETUP.md) if you want to run your own copy.
-
-## Roadmap ideas
-
-- An optional passphrase layered on top of the code for a bit more privacy
-- Notes that automatically expire after a set number of days
-- Support for dropping in plain text files, not just typed or pasted content
-
 ---
 
 Built for one person, on one bad Wi-Fi connection, trying to get a paragraph from a laptop to a phone without opening five apps to do it.

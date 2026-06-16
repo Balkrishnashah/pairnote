@@ -403,7 +403,7 @@ const FIREBASE_CONFIG = {
 const CODE_LENGTH = 6;
 const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no 0/O/1/I to avoid confusion
 const SAVE_DEBOUNCE_MS = 600;
-const RELAY_TTL_DAYS = 3;
+const RELAY_TTL_DAYS = 14;
 
 /* ---------- 2. CODE GENERATION ---------- */
 const CodeGen = {
@@ -446,16 +446,12 @@ const Storage = (function () {
     return db.ref("notes/" + code);
   }
 
-  function ttlFromNow() {
-    return Date.now() + RELAY_TTL_DAYS * 24 * 60 * 60 * 1000;
-  }
-
   /** Create a new relay entry with an empty body. */
   function create(code) {
     return refFor(code).set({
       text: "",
       updatedAt: firebase.database.ServerValue.TIMESTAMP,
-      expiresAt: ttlFromNow()
+      expiresAt: Date.now() + RELAY_TTL_DAYS * 24 * 60 * 60 * 1000
     });
   }
 
@@ -465,30 +461,11 @@ const Storage = (function () {
     return snap.exists();
   }
 
-  /** Read the current record once (used for expiry checks on open). */
-  async function read(code) {
-    const snap = await refFor(code).once("value");
-    return snap.val();
-  }
-
-  /** Delete a relay entry entirely (used when expired). */
-  function purge(code) {
-    return refFor(code).remove();
-  }
-
-  /** True if the record's expiresAt has passed. */
-  function isExpired(record) {
-    return !!record && typeof record.expiresAt === "number" && Date.now() > record.expiresAt;
-  }
-
-  /** Write new text content (debounced upstream). Every save also pushes
-   *  expiresAt forward, so an actively-used note keeps renewing its
-   *  3-day window instead of expiring mid-use. */
+  /** Write new text content (debounced upstream). */
   function save(code, text) {
     return refFor(code).update({
       text: text,
-      updatedAt: firebase.database.ServerValue.TIMESTAMP,
-      expiresAt: ttlFromNow()
+      updatedAt: firebase.database.ServerValue.TIMESTAMP
     });
   }
 
@@ -507,7 +484,7 @@ const Storage = (function () {
     return connected;
   }
 
-  return { init, create, exists, read, save, purge, isExpired, subscribe, isConnected };
+  return { init, create, exists, save, subscribe, isConnected };
 })();
 
 /* ---------- 4. UI ---------- */
@@ -593,17 +570,10 @@ const App = (function () {
 
     UI.setCode(code);
     UI.setStatus("live");
-    UI.setMeta("Notes expire after " + RELAY_TTL_DAYS + " days of inactivity.");
+    UI.setMeta("Type this code on your other device to sync.");
 
-    const existing = await Storage.read(code);
-
-    if (existing && Storage.isExpired(existing)) {
-      await Storage.purge(code);
-      await Storage.create(code);
-      lastRemoteText = "";
-      UI.setEditorText("", { silent: false });
-      UI.showToast("This code expired — starting fresh");
-    } else if (!existing) {
+    const exists = await Storage.exists(code);
+    if (!exists) {
       await Storage.create(code);
     }
 

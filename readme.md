@@ -1,61 +1,52 @@
 # Pairnote
 
-**Move text between your devices without a URL, an account, or an app.**
+**Got something on one device that you need on another? Type a code, and it's there.**
 
-Pairnote is a tiny clipboard relay. Open it on one device, get a 6-character code. Open it on another device, type that code, and whatever you write shows up there too — live, both ways.
+No login. No URL to send yourself. No emailing a snippet just to get it from your laptop to your phone. Pairnote is a tiny clipboard that follows you between your own devices, using nothing but a short code you can remember.
 
-```
-You ───▶  K7QX2M  ───▶  Your other laptop
-```
+![Pairnote interface preview](./assets/pairnote-preview.svg)
 
-No login. No file to email yourself. No copy-pasting through Slack just to get a snippet from your desktop to your phone.
+🔗 **Try it now:** [balkrishnashah.github.io/pairnote](https://balkrishnashah.github.io/pairnote/)
 
 ---
 
-## Why this exists
+## What it actually does
 
-Most "share text between devices" tools hand you a URL to send to yourself, which means a notification, a tab, a link you have to click. Pairnote flips that: you carry a short code in your head (or your clipboard) instead, and typing it back in is the entire interface. It's built for one person syncing their own stuff across their own machines — not for sharing with others.
+You're working on your laptop and need that paragraph, link, or snippet on your phone. Normally that means messaging yourself, emailing a file, or copying through some chat app just to bridge two screens you own.
 
-## How it works
+Pairnote skips all of that. Open the page, it hands you a six-character code. Open the same page anywhere else, type that code in, and your text is right there — synced live, in both directions, for as long as you need it.
 
-1. Open the page on Device A. It generates a code automatically — something like `K7QX2M`.
-2. Paste or type whatever you need to move: a snippet, a link, a full article.
-3. Open the same page on Device B. Type that code into **enter code**, hit **Open**.
-4. Your text is there. Keep editing on either side and it stays in sync while both tabs are open.
+## How to use it
 
-The code is remembered in your browser's local storage, so reopening Pairnote later reconnects automatically. You only type a code in when pairing a *new* device for the first time.
+**On your first device**
+1. Open the page. A code appears automatically — something like `K7QX2M`.
+2. Type or paste whatever you want to move into the box.
+3. That's it. It saves on its own as you type.
 
-## Under the hood
+**On your other device**
+1. Open the same page.
+2. Type that code into the **enter code** field at the top.
+3. Tap **Open**. Your text is already there.
 
-| Piece | Role |
-|---|---|
-| `CodeGen` | Generates and validates the 6-character code. Swap the alphabet or length here. |
-| `Storage` | The only module that talks to the backend (Firebase Realtime Database). Replace this block to switch providers — nothing else changes. |
-| `UI` | All DOM reads and writes, isolated into small named functions. |
-| `App` | Wiring: app state, event listeners, save-debounce logic. |
+Keep editing from either side and both stay in sync while the tabs are open. Come back tomorrow and the code is still remembered on each device, so you won't need to re-enter it unless you're connecting a brand new one.
 
-Everything lives in a single `index.html` so it deploys to GitHub Pages with zero build step, but the internals are split cleanly enough to debug or extend one piece at a time.
+## Who this is for
 
-## Setup
+People who own more than one device and are tired of the small friction of moving text between them. Not built for sharing with other people — it's a personal relay, not a messaging tool.
 
-Full step-by-step instructions, including Firebase configuration and database rules, are in [`SETUP.md`](./SETUP.md). Short version:
+## A quick note on privacy
 
-1. Create a free Firebase project, enable Realtime Database.
-2. Drop your config into `FIREBASE_CONFIG` at the top of the script in `index.html`.
-3. Set the database rules (provided in `SETUP.md`) so only the `notes/` path is writable.
-4. Push to GitHub, enable Pages in repo settings.
+There's no account and no password — the code itself is the key. That keeps things simple, but it also means anyone who has your code can read or edit that note. Treat the code the way you'd treat a sticky note on your desk: fine for links, drafts, and snippets; not the place for passwords or anything truly sensitive.
 
-You're live at `https://<your-username>.github.io/pairnote/`.
+## For the curious: how it's built
 
-## A note on security
-
-There's no login by design — the code itself is the key. That's fine for personal use: a 6-character code from a 31-character alphabet has roughly 887 billion combinations, well beyond casual guessing. It is **not** meant for sensitive secrets (passwords, financial data) since there's no encryption layer beyond what Firebase provides at rest. For day-to-day text, links, and snippets between your own devices, it's a comfortable trade-off between convenience and safety.
+Pairnote is one self-contained page, hosted free on GitHub Pages, with a small Firebase database keeping each code's text in sync in real time. The code is split into four clean pieces — code generation, storage, interface, and app logic — so any part can be improved on its own without untangling the rest. Full technical setup is in [`SETUP.md`](./SETUP.md) if you want to run your own copy.
 
 ## Roadmap ideas
 
-- Optional passphrase appended to a code for an extra layer on top of the random key
-- Auto-expiring notes after a set number of days (TTL field already exists in storage, cleanup job not yet wired up)
-- Plain-text file drop, not just typed/pasted content
+- An optional passphrase layered on top of the code for a bit more privacy
+- Notes that automatically expire after a set number of days
+- Support for dropping in plain text files, not just typed or pasted content
 
 ---
 

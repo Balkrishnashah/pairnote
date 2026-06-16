@@ -1,0 +1,48 @@
+<svg viewBox="0 0 760 620" xmlns="http://www.w3.org/2000/svg" role="img">
+<title>Pairnote app preview</title>
+<desc>Screenshot-style mockup of the Pairnote interface: a status bar, a code-entry field to connect to another device, a ticket showing this device's six character code, a text editor, and a footer explaining how the tool works.</desc>
+
+<rect width="760" height="620" rx="16" fill="#0c0d0f"/>
+
+<!-- top bar -->
+<circle cx="40" cy="44" r="4" fill="#ff6a1f"/>
+<text x="54" y="49" font-family="JetBrains Mono, Consolas, monospace" font-size="16" font-weight="600" fill="#eef0f2" letter-spacing="-0.3">pairnote</text>
+<rect x="660" y="32" width="60" height="24" rx="12" fill="none" stroke="#2a2d31" stroke-width="1"/>
+<text x="690" y="48" font-family="JetBrains Mono, Consolas, monospace" font-size="10" fill="#3ddc84" text-anchor="middle" letter-spacing="0.5">live</text>
+
+<!-- connect panel -->
+<rect x="40" y="84" width="540" height="40" rx="8" fill="#15171a" stroke="#2a2d31" stroke-width="1"/>
+<text x="56" y="108" font-family="JetBrains Mono, Consolas, monospace" font-size="13" fill="#565b62">enter code from other device</text>
+<rect x="600" y="84" width="80" height="40" rx="8" fill="#ff6a1f"/>
+<text x="640" y="108" font-family="Inter, sans-serif" font-size="13" font-weight="600" fill="#1a0a00" text-anchor="middle">Open</text>
+
+<!-- ticket -->
+<rect x="40" y="146" width="640" height="118" rx="14" fill="#191b1e" stroke="#2a2d31" stroke-width="1"/>
+<text x="64" y="180" font-family="JetBrains Mono, Consolas, monospace" font-size="10" fill="#565b62" letter-spacing="1">THIS PAIRNOTE'S CODE</text>
+<text x="64" y="216" font-family="JetBrains Mono, Consolas, monospace" font-size="32" font-weight="600" fill="#eef0f2" letter-spacing="2">K7QX2M</text>
+<rect x="556" y="166" width="100" height="32" rx="6" fill="none" stroke="#2a2d31" stroke-width="1"/>
+<text x="606" y="187" font-family="Inter, sans-serif" font-size="11.5" font-weight="600" fill="#8a8f96" text-anchor="middle">Copy code</text>
+<line x1="64" y1="224" x2="656" y2="224" stroke="#2a2d31" stroke-width="1" stroke-dasharray="4 4"/>
+<text x="64" y="246" font-family="JetBrains Mono, Consolas, monospace" font-size="12" fill="#8a8f96">Type this code on your other device to sync.</text>
+
+<!-- editor -->
+<rect x="40" y="288" width="640" height="200" rx="14" fill="#15171a" stroke="#2a2d31" stroke-width="1"/>
+<text x="64" y="320" font-family="Inter, sans-serif" font-size="14.5" fill="#565b62">Paste or type anything here — an article, a link, a snippet.</text>
+<text x="64" y="344" font-family="Inter, sans-serif" font-size="14.5" fill="#565b62">It saves automatically and shows up wherever you open</text>
+<text x="64" y="368" font-family="Inter, sans-serif" font-size="14.5" fill="#565b62">this same code.</text>
+
+<!-- editor footer -->
+<text x="40" y="514" font-family="JetBrains Mono, Consolas, monospace" font-size="12" fill="#565b62">Synced 9:41 PM</text>
+<rect x="544" y="498" width="78" height="30" rx="6" fill="none" stroke="#2a2d31" stroke-width="1"/>
+<text x="583" y="518" font-family="Inter, sans-serif" font-size="11.5" font-weight="600" fill="#8a8f96" text-anchor="middle">Copy text</text>
+<rect x="632" y="498" width="48" height="30" rx="6" fill="none" stroke="#2a2d31" stroke-width="1"/>
+<text x="656" y="518" font-family="Inter, sans-serif" font-size="11.5" font-weight="600" fill="#8a8f96" text-anchor="middle">Clear</text>
+
+<!-- divider -->
+<line x1="40" y1="554" x2="680" y2="554" stroke="#2a2d31" stroke-width="1"/>
+
+<!-- how it works -->
+<text x="40" y="580" font-family="JetBrains Mono, Consolas, monospace" font-size="10" fill="#565b62" letter-spacing="1">HOW THIS WORKS</text>
+<text x="40" y="604" font-family="JetBrains Mono, Consolas, monospace" font-size="12" fill="#eef0f2">01</text>
+<text x="64" y="604" font-family="Inter, sans-serif" font-size="12.5" fill="#8a8f96">Open on device A, get a code automatically generated.</text>
+</svg>

@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pairnote — move text between your devices</title>
+<meta name="description" content="A tiny clipboard relay. Generate a code on one device, load it on another, sync text instantly.">
+
+<style>
+  :root {
+    /* ---- Design tokens ---- */
+    --bg: #0c0d0f;
+    --bg-raised: #15171a;
+    --bg-stub: #191b1e;
+    --hairline: #2a2d31;
+    --text-primary: #eef0f2;
+    --text-secondary: #8a8f96;
+    --text-faint: #565b62;
+    --signal: #ff6a1f;
+    --signal-dim: #ff6a1f33;
+    --signal-glow: #ff6a1f66;
+    --ok: #3ddc84;
+
+    --font-display: 'Space Grotesk', system-ui, sans-serif;
+    --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+    --font-mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+
+    --radius: 14px;
+    --radius-sm: 8px;
+  }
+
+  @font-face {
+    font-family: 'Space Grotesk';
+    src: local('Space Grotesk');
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    min-height: 100vh;
+  }
+
+  body {
+    background-image:
+      radial-gradient(circle at 15% 0%, rgba(255,106,31,0.07), transparent 45%),
+      radial-gradient(circle at 85% 100%, rgba(255,106,31,0.05), transparent 50%);
+    background-attachment: fixed;
+  }
+
+  a { color: inherit; }
+
+  /* ---- Layout ---- */
+  .shell {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 48px 20px 80px;
+  }
+
+  @media (max-width: 480px) {
+    .shell { padding: 32px 16px 64px; }
+  }
+
+  header.top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 40px;
+  }
+
+  .wordmark {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 19px;
+    letter-spacing: -0.02em;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .wordmark .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--signal);
+    box-shadow: 0 0 0 0 var(--signal-glow);
+    animation: ping 2.4s ease-out infinite;
+  }
+
+  @keyframes ping {
+    0%   { box-shadow: 0 0 0 0 var(--signal-glow); }
+    70%  { box-shadow: 0 0 0 7px transparent; }
+    100% { box-shadow: 0 0 0 0 transparent; }
+  }
+
+  .status-pill {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    border: 1px solid var(--hairline);
+    border-radius: 999px;
+    padding: 5px 11px;
+  }
+  .status-pill.live { color: var(--ok); border-color: #3ddc8444; }
+  .status-pill.saving { color: var(--signal); border-color: var(--signal-dim); }
+
+  /* ---- Ticket / stub (signature element) ---- */
+  .ticket {
+    background: var(--bg-stub);
+    border: 1px solid var(--hairline);
+    border-radius: var(--radius);
+    padding: 22px 24px;
+    margin-bottom: 28px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .ticket::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(120deg, transparent 40%, var(--signal-dim) 50%, transparent 60%);
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    pointer-events: none;
+  }
+
+  .ticket.pulse::before {
+    opacity: 1;
+    animation: sweep 0.9s ease-out;
+  }
+
+  @keyframes sweep {
+    0% { transform: translateX(-100%); opacity: 0.9; }
+    100% { transform: translateX(100%); opacity: 0; }
+  }
+
+  .ticket-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 16px;
+  }
+
+  .ticket-label {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-faint);
+    margin-bottom: 8px;
+  }
+
+  .ticket-code {
+    font-family: var(--font-mono);
+    font-size: 30px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    color: var(--text-primary);
+    line-height: 1;
+    user-select: all;
+  }
+
+  @media (max-width: 420px) {
+    .ticket-code { font-size: 24px; }
+  }
+
+  .ticket-meta {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    color: var(--text-secondary);
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px dashed var(--hairline);
+  }
+
+  /* ---- Buttons ---- */
+  .btn {
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 14px;
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: 10px 16px;
+    cursor: pointer;
+    transition: transform 0.12s ease, opacity 0.12s ease, background 0.15s ease;
+    white-space: nowrap;
+  }
+  .btn:active { transform: scale(0.97); }
+
+  .btn-signal {
+    background: var(--signal);
+    color: #1a0a00;
+  }
+  .btn-signal:hover { background: #ff7d3c; }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--text-secondary);
+    border: 1px solid var(--hairline);
+  }
+  .btn-ghost:hover { color: var(--text-primary); border-color: var(--text-faint); }
+
+  .btn-sm { padding: 7px 12px; font-size: 12.5px; }
+
+  /* ---- Connect panel ---- */
+  .connect-panel {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 28px;
+  }
+
+  .connect-panel input {
+    flex: 1;
+    background: var(--bg-raised);
+    border: 1px solid var(--hairline);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    font-size: 14px;
+    letter-spacing: 0.04em;
+    outline: none;
+    transition: border-color 0.15s ease;
+    text-transform: uppercase;
+  }
+
+  .connect-panel input:focus { border-color: var(--signal); }
+  .connect-panel input::placeholder { color: var(--text-faint); text-transform: none; letter-spacing: normal; }
+
+  /* ---- Editor ---- */
+  .editor-wrap { position: relative; }
+
+  textarea#editor {
+    width: 100%;
+    min-height: 320px;
+    background: var(--bg-raised);
+    border: 1px solid var(--hairline);
+    border-radius: var(--radius);
+    padding: 20px;
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    font-size: 15.5px;
+    line-height: 1.65;
+    resize: vertical;
+    outline: none;
+    transition: border-color 0.15s ease;
+  }
+
+  textarea#editor:focus { border-color: var(--signal-dim); }
+  textarea#editor::placeholder { color: var(--text-faint); }
+
+  .editor-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 12px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-faint);
+  }
+
+  .editor-actions { display: flex; gap: 8px; }
+
+  /* ---- Footer / how it works ---- */
+  .howto {
+    margin-top: 56px;
+    padding-top: 28px;
+    border-top: 1px solid var(--hairline);
+  }
+
+  .howto-title {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-faint);
+    margin-bottom: 16px;
+  }
+
+  .howto-steps {
+    display: grid;
+    gap: 10px;
+    font-size: 13.5px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+  }
+
+  .howto-steps span { color: var(--text-primary); font-family: var(--font-mono); margin-right: 8px; }
+
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(8px);
+    background: var(--bg-raised);
+    border: 1px solid var(--hairline);
+    color: var(--text-primary);
+    font-size: 13px;
+    padding: 10px 18px;
+    border-radius: 999px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    font-family: var(--font-mono);
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); pointer-events: auto; }
+
+  :focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <header class="top">
+    <div class="wordmark"><span class="dot"></span>pairnote</div>
+    <div class="status-pill" id="statusPill">idle</div>
+  </header>
+
+  <!-- Connect panel: load an existing code -->
+  <div class="connect-panel">
+    <input id="codeInput" type="text" maxlength="6" placeholder="enter code from other device" autocomplete="off" spellcheck="false">
+    <button class="btn btn-signal" id="connectBtn">Open</button>
+  </div>
+
+  <!-- The ticket: this device's current code -->
+  <div class="ticket" id="ticket">
+    <div class="ticket-row">
+      <div>
+        <div class="ticket-label">This pairnote's code</div>
+        <div class="ticket-code" id="codeDisplay">------</div>
+      </div>
+      <button class="btn btn-ghost btn-sm" id="copyCodeBtn">Copy code</button>
+    </div>
+    <div class="ticket-meta" id="ticketMeta">Type this code on your other device to sync.</div>
+  </div>
+
+  <!-- Editor -->
+  <div class="editor-wrap">
+    <textarea id="editor" placeholder="Paste or type anything here — an article, a link, a snippet. It saves automatically and shows up wherever you open this same code."></textarea>
+  </div>
+
+  <div class="editor-footer">
+    <span id="lastSynced">Not synced yet</span>
+    <div class="editor-actions">
+      <button class="btn btn-ghost btn-sm" id="copyTextBtn">Copy text</button>
+      <button class="btn btn-ghost btn-sm" id="clearBtn">Clear</button>
+    </div>
+  </div>
+
+  <div class="howto">
+    <div class="howto-title">How this works</div>
+    <div class="howto-steps">
+      <div><span>01</span>Open this page on your first device. It generates a code automatically.</div>
+      <div><span>02</span>Type or paste whatever you want to move.</div>
+      <div><span>03</span>Open this same page on your other device, type in that code, hit Open.</div>
+      <div><span>04</span>Your text is there. Edits sync both ways while the tab is open.</div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+
+<script>
+/* =========================================================================
+   RELAY — modular structure
+   1. config        : Firebase setup
+   2. CodeGen        : random code generation
+   3. Storage         : all reads/writes to Firebase, isolated behind a clean API
+   4. UI               : DOM refs + render helpers
+   5. App                : wiring / event handlers / app state
+   ========================================================================= */
+
+/* ---------- 1. CONFIG ----------
+   Replace with your own Firebase project config.
+   Create a free project at https://console.firebase.google.com
+   Enable "Realtime Database" in test mode (or use the rules below).
+-------------------------------------------------------------------------- */
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyD61JuBiXD_1b8ZEbiu7-YP4IdB5UnaqMs",
+  authDomain: "bk-pairnote.firebaseapp.com",
+  databaseURL: "https://bk-pairnote-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "bk-pairnote"
+};
+
+const CODE_LENGTH = 6;
+const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no 0/O/1/I to avoid confusion
+const SAVE_DEBOUNCE_MS = 600;
+const RELAY_TTL_DAYS = 14;
+
+/* ---------- 2. CODE GENERATION ---------- */
+const CodeGen = {
+  random() {
+    let out = "";
+    for (let i = 0; i < CODE_LENGTH; i++) {
+      out += CODE_ALPHABET[Math.floor(Math.random() * CODE_ALPHABET.length)];
+    }
+    return out;
+  },
+  isValid(code) {
+    return typeof code === "string" && code.trim().length === CODE_LENGTH;
+  },
+  normalize(code) {
+    return code.trim().toUpperCase();
+  }
+};
+
+/* ---------- 3. STORAGE (Firebase) ----------
+   Isolated so the backend can be swapped later (e.g. for Cloudflare KV)
+   without touching UI or App logic. Only this object talks to Firebase.
+-------------------------------------------------------------------------- */
+const Storage = (function () {
+  let db = null;
+  let liveRef = null;
+  let connected = false;
+
+  function init() {
+    try {
+      firebase.initializeApp(FIREBASE_CONFIG);
+      db = firebase.database();
+      connected = true;
+    } catch (err) {
+      console.error("Firebase init failed:", err);
+      connected = false;
+    }
+  }
+
+  function refFor(code) {
+    return db.ref("notes/" + code);
+  }
+
+  /** Create a new relay entry with an empty body. */
+  function create(code) {
+    return refFor(code).set({
+      text: "",
+      updatedAt: firebase.database.ServerValue.TIMESTAMP,
+      expiresAt: Date.now() + RELAY_TTL_DAYS * 24 * 60 * 60 * 1000
+    });
+  }
+
+  /** Check whether a code already exists. */
+  async function exists(code) {
+    const snap = await refFor(code).once("value");
+    return snap.exists();
+  }
+
+  /** Write new text content (debounced upstream). */
+  function save(code, text) {
+    return refFor(code).update({
+      text: text,
+      updatedAt: firebase.database.ServerValue.TIMESTAMP
+    });
+  }
+
+  /** Subscribe to live changes for a code. Returns an unsubscribe function. */
+  function subscribe(code, onUpdate) {
+    if (liveRef) liveRef.off();
+    liveRef = refFor(code);
+    liveRef.on("value", (snap) => {
+      const val = snap.val();
+      onUpdate(val);
+    });
+    return () => liveRef && liveRef.off();
+  }
+
+  function isConnected() {
+    return connected;
+  }
+
+  return { init, create, exists, save, subscribe, isConnected };
+})();
+
+/* ---------- 4. UI ---------- */
+const UI = (function () {
+  const el = {
+    statusPill: document.getElementById("statusPill"),
+    codeInput: document.getElementById("codeInput"),
+    connectBtn: document.getElementById("connectBtn"),
+    ticket: document.getElementById("ticket"),
+    codeDisplay: document.getElementById("codeDisplay"),
+    ticketMeta: document.getElementById("ticketMeta"),
+    copyCodeBtn: document.getElementById("copyCodeBtn"),
+    editor: document.getElementById("editor"),
+    lastSynced: document.getElementById("lastSynced"),
+    copyTextBtn: document.getElementById("copyTextBtn"),
+    clearBtn: document.getElementById("clearBtn"),
+    toast: document.getElementById("toast")
+  };
+
+  function setStatus(state) {
+    // state: 'idle' | 'live' | 'saving' | 'offline'
+    el.statusPill.className = "status-pill" + (state === "live" ? " live" : state === "saving" ? " saving" : "");
+    el.statusPill.textContent = state;
+  }
+
+  function setCode(code) {
+    el.codeDisplay.textContent = code;
+  }
+
+  function setMeta(text) {
+    el.ticketMeta.textContent = text;
+  }
+
+  function pulseTicket() {
+    el.ticket.classList.remove("pulse");
+    // restart animation
+    requestAnimationFrame(() => {
+      el.ticket.classList.add("pulse");
+      setTimeout(() => el.ticket.classList.remove("pulse"), 950);
+    });
+  }
+
+  function setEditorText(text, { silent = false } = {}) {
+    if (silent && document.activeElement === el.editor) return; // don't clobber while user is typing
+    el.editor.value = text || "";
+  }
+
+  function setLastSynced(date) {
+    if (!date) { el.lastSynced.textContent = "Not synced yet"; return; }
+    const d = new Date(date);
+    el.lastSynced.textContent = "Synced " + d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  }
+
+  function showToast(msg) {
+    el.toast.textContent = msg;
+    el.toast.classList.add("show");
+    clearTimeout(el.toast._t);
+    el.toast._t = setTimeout(() => el.toast.classList.remove("show"), 1800);
+  }
+
+  return { el, setStatus, setCode, setMeta, pulseTicket, setEditorText, setLastSynced, showToast };
+})();
+
+/* ---------- 5. APP ---------- */
+const App = (function () {
+  let currentCode = null;
+  let saveTimer = null;
+  let lastRemoteText = "";
+  let suppressNextRemoteEcho = false;
+
+  function getStoredCode() {
+    return localStorage.getItem("pairnote.code");
+  }
+
+  function rememberCode(code) {
+    localStorage.setItem("pairnote.code", code);
+  }
+
+  async function openRelay(code) {
+    code = CodeGen.normalize(code);
+    currentCode = code;
+    rememberCode(code);
+
+    UI.setCode(code);
+    UI.setStatus("live");
+    UI.setMeta("Type this code on your other device to sync.");
+
+    const exists = await Storage.exists(code);
+    if (!exists) {
+      await Storage.create(code);
+    }
+
+    Storage.subscribe(code, (data) => {
+      if (!data) return;
+      if (suppressNextRemoteEcho) {
+        suppressNextRemoteEcho = false;
+        lastRemoteText = data.text || "";
+        UI.setLastSynced(data.updatedAt);
+        return;
+      }
+      const incoming = data.text || "";
+      if (incoming !== lastRemoteText) {
+        lastRemoteText = incoming;
+        UI.setEditorText(incoming, { silent: true });
+        UI.pulseTicket();
+        UI.setLastSynced(data.updatedAt);
+      }
+    });
+  }
+
+  function scheduleSave(text) {
+    UI.setStatus("saving");
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(async () => {
+      suppressNextRemoteEcho = true;
+      lastRemoteText = text;
+      await Storage.save(currentCode, text);
+      UI.setStatus("live");
+      UI.setLastSynced(Date.now());
+    }, SAVE_DEBOUNCE_MS);
+  }
+
+  function bindEvents() {
+    UI.el.editor.addEventListener("input", (e) => {
+      if (!currentCode) return;
+      scheduleSave(e.target.value);
+    });
+
+    UI.el.connectBtn.addEventListener("click", () => {
+      const raw = UI.el.codeInput.value;
+      if (!CodeGen.isValid(raw)) {
+        UI.showToast("Code must be " + CODE_LENGTH + " characters");
+        return;
+      }
+      UI.el.codeInput.value = "";
+      openRelay(raw);
+    });
+
+    UI.el.codeInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") UI.el.connectBtn.click();
+    });
+
+    UI.el.copyCodeBtn.addEventListener("click", async () => {
+      await navigator.clipboard.writeText(currentCode);
+      UI.showToast("Code copied");
+    });
+
+    UI.el.copyTextBtn.addEventListener("click", async () => {
+      await navigator.clipboard.writeText(UI.el.editor.value);
+      UI.showToast("Text copied");
+    });
+
+    UI.el.clearBtn.addEventListener("click", () => {
+      UI.el.editor.value = "";
+      scheduleSave("");
+      UI.showToast("Cleared");
+    });
+  }
+
+  function init() {
+    Storage.init();
+    bindEvents();
+
+    if (!Storage.isConnected()) {
+      UI.setStatus("offline");
+      UI.setMeta("Backend not configured — see FIREBASE_CONFIG in source.");
+      return;
+    }
+
+    const existing = getStoredCode();
+    const code = existing || CodeGen.random();
+    openRelay(code);
+  }
+
+  return { init };
+})();
+
+document.addEventListener("DOMContentLoaded", App.init);
+</script>
+
+</body>
+</html>
